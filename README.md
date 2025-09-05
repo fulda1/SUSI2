@@ -1,10 +1,3 @@
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/fulda1/SUSI2)
-![GitHub Release Date](https://img.shields.io/github/release-date/fulda1/SUSI2?color=blue&label=last%20release)<br/>
-![GitHub commits since latest release (by date)](https://img.shields.io/github/commits-since/fulda1/SUSI2/latest?color=orange)
-[![GitHub stars](https://img.shields.io/github/stars/fulda1/SUSI2)](https://github.com/fulda1/SUSI2/stargazers)<br/>
-[![arduino-library-badge](https://www.ardu-badge.com/badge/Rcn600.svg)](https://www.ardu-badge.com/Rcn600)
-[![License](https://img.shields.io/github/license/fulda1/SUSI2)](#)
-
 # Introduction
 This library is heavily inspired by https://github.com/TheFidax/Rcn600/
 At minimum trying to keep same interface.
@@ -24,7 +17,7 @@ Library tested on Nano RISC-V CH32V003 (CH32V003F4U6).</br>
 
 To work, you need 2 resistors **470Ω in series** on the SUSI lines (Clock and Data).<br/>
 On procesor CH32V003 *Clock* must be connicted to pin PC5 (SPI_SCK) and *Data* must be connected to pin PC6 (SPI_MOSI). Both pins are 5V tolerant (as requested in specification).<br/>
-<img src="https://github.com/fulda1/SUSI2/blob/master/wiring.png">
+<img src="https://github.com/fulda1/SUSI2/blob/master/wiring.png" width="942">
 
 More information about the specification in the file [RCN-600.pdf](https://github.com/TheFidax/Rcn600/blob/master/RCN-600.pdf).
 
