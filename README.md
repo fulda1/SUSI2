@@ -24,7 +24,7 @@ More information about the specification in the file [RCN-600.pdf](https://githu
 ------------
 
 # Video Example
-TBD
+TBD<br/>
 [![Video Presentazione](https://img.youtube.com/vi/VzgkDouOvCY/0.jpg)](http://www.youtube.com/watch?v=VzgkDouOvCY)
 
 ------------
