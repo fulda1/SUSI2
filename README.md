@@ -17,7 +17,9 @@ Library tested on Nano RISC-V CH32V003 (CH32V003F4U6).</br>
 
 To work, you need 2 resistors **470Ω in series** on the SUSI lines (Clock and Data).<br/>
 On procesor CH32V003 *Clock* must be connicted to pin PC5 (SPI_SCK) and *Data* must be connected to pin PC6 (SPI_MOSI). Both pins are 5V tolerant (as requested in specification).<br/>
-<img src="https://raw.githubusercontent.com/fulda1/SUSI2/refs/heads/main/wiring.png" width="942">
+<img src="https://raw.githubusercontent.com/fulda1/SUSI2/refs/heads/main/wiring.png" width="942"><br/>
+Simplified schematic:<br/>
+<img src="https://raw.githubusercontent.com/fulda1/SUSI2/refs/heads/main/schematic.jpg">
 
 More information about the specification in the file [RCN-600.pdf](https://github.com/TheFidax/Rcn600/blob/master/RCN-600.pdf).
 
