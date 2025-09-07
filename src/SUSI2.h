@@ -102,6 +102,14 @@ class SUSI2 {
 
     public:
         /*
+        *   SUSI2() Class Constructor
+        *   Input:
+        *       - none
+        *   Returns:
+        *       - None
+        */
+        SUSI2();
+        /*
         *   SUSI2() Class Constructor (for compatibility only)
         *   Input:
         *       - the pin to which the 'Clock' line is connected - ignored
@@ -110,14 +118,6 @@ class SUSI2 {
         *       - None
         */
         SUSI2(uint8_t CLK_pin, uint8_t DATA_pin);
-        /*
-        *   SUSI2() Class Constructor
-        *   Input:
-        *       - none
-        *   Returns:
-        *       - None
-        */
-        SUSI2(void);
         /*
         *   ~SUSI2() Class Destructor
         *   Input:
@@ -159,7 +159,7 @@ class SUSI2 {
         *   Returns:
         *       - None
         */
-        void AddToQueue(PacketT);
+        void AddToQueue(PacketT ReceivedData);
 
 };
 
