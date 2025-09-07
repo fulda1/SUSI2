@@ -418,8 +418,8 @@ void setup() {                                                                  
 
     Serial.println("SUSI Print Decoded Messages:");                                                                 // Welcome message
 
-    SUSI.init();                                                                                                    // library initialisation
     EEPROM.begin();                                                                                                 // init emulated eeprom
+    SUSI.init();                                                                                                    // library initialisation
 
 }
 
