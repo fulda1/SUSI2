@@ -20,11 +20,11 @@ uint8_t ByteCount;                                                            //
 /**********************************************************************************************************************/
 /* Constructor and Destructor */
 
+SUSI2::SUSI2() {                                                                                    // Class constructor
+}                                                                                                       // empty for now
+
 SUSI2::SUSI2(uint8_t CLK_pin, uint8_t DATA_pin) {                                                       // Class constructor
 }                                                                                                       // This one is for compatibility only. Pin assignment is fixed for the hardware
-
-SUSI2::SUSI2(void) {                                                                                    // Class constructor
-}                                                                                                       // empty for now
 
 SUSI2::~SUSI2(void) {                                                                                   // Class Destructor
   SPI_Cmd( SPI1, DISABLE );                                                                             // stop SPI receiver
@@ -77,10 +77,10 @@ void SUSI2::init(uint8_t SlaveAddress) {                                        
 /* Interrupts */
 /* interrupts are not member of class, they are linked as static */
 
-void SUSI2::AddToQueue(PacketT) {
+void SUSI2::AddToQueue(PacketT ReceivedData) {
   if (!MyBuffer[BufferW].B.used)                       // is buffer available?
   {
-    MyBuffer[BufferW++] = partial;                     // yes, store data
+    MyBuffer[BufferW++] = ReceivedData;                     // yes, store data
     if (BufferW == BUFFER_SIZE) {BufferW = 0;}         // rotate cyrcular pointer
   }
 }
@@ -423,7 +423,7 @@ int8_t SUSI2::process(void) {
             }
             else {
                 // Command for one function
-                notifySusiBinaryState(MyBuffer[BufferR].B.arg1 & 0x7F, MyBuffer[BufferR].B.arg1 & 0x80);
+                notifySusiBinaryState(MyBuffer[BufferR].B.arg1 & 0x7F, (MyBuffer[BufferR].B.arg1 & 0x80) != 0);
                                        // ^^ Function number             ^^ Function state
             }
         }
@@ -452,7 +452,7 @@ int8_t SUSI2::process(void) {
           BAddress = BAddress << 7;
           BAddress |= (LowBinary & 0x7F);
           if (notifySusiBinaryStateL) {
-            notifySusiBinaryStateL(BAddress, LowBinary & 0x80);
+            notifySusiBinaryStateL(BAddress, (LowBinary & 0x80) != 0);
           }
         }
         break;
@@ -690,7 +690,7 @@ int8_t SUSI2::process(void) {
             This and the following two commands are the 3-byte packets mentioned in section 4 according 
             to [S-9.2.1].*/
         if (IsValidCV(MyBuffer[BufferR].B.arg1)) {                      // is command valid for this slave?
-		  if ((MyBuffer[BufferR].B.arg1 == 1) || (MyBuffer[BufferR].B.arg1 == 124)) {
+		      if ((MyBuffer[BufferR].B.arg1 == 1) || (MyBuffer[BufferR].B.arg1 == 124)) {
             if (MyBuffer[BufferR].B.arg2 == CV_Index) { SendACK(); }                         // for index response is instant ...
           } else {
             if (notifySusiCVRead) {                                                                     // If there is a CV storage system
@@ -717,31 +717,31 @@ int8_t SUSI2::process(void) {
               CVValue = notifySusiCVRead(MyBuffer[BufferR].B.arg1, CV_Index);  // for others, function with CV and index must be called
             }
           }
-		  if (MyBuffer[BufferR].B.arg2 & 0x10) {                  // K=1 for write
-            if ((MyBuffer[BufferR].B.arg1 == 1) || (MyBuffer[BufferR].B.arg1 == 124)) {
-              if (MyBuffer[BufferR].B.arg2 & 0x08) {CV_Index |= BitMask;} else {CV_Index &= (!BitMask);}  // for index response is instant ...
-			  SendACK();                          // confirm
-            } else {
-              if (notifySusiCVRead) {                                                                     // If there is a CV storage system
-			    if (MyBuffer[BufferR].B.arg2 & 0x08) {CVValue |= BitMask;} else {CVValue &= (!BitMask);}
-                if (notifySusiCVWrite) {
-                  if (notifySusiCVWrite(MyBuffer[BufferR].B.arg1, CV_Index, CVValue) == CVValue) {   // for others, function with CV and index must be called
-                    SendACK();     // confirm
+          if (MyBuffer[BufferR].B.arg2 & 0x10) {                  // K=1 for write
+                if ((MyBuffer[BufferR].B.arg1 == 1) || (MyBuffer[BufferR].B.arg1 == 124)) {
+                  if (MyBuffer[BufferR].B.arg2 & 0x08) {CV_Index |= BitMask;} else {CV_Index &= (!BitMask);}  // for index response is instant ...
+                    SendACK();                          // confirm
+                } else {
+                  if (notifySusiCVRead) {                                                                     // If there is a CV storage system
+                    CVValue = notifySusiCVRead(MyBuffer[BufferR].B.arg1, CV_Index);
+                    if (MyBuffer[BufferR].B.arg2 & 0x08) {CVValue |= BitMask;} else {CVValue &= (!BitMask);}
+                    if (notifySusiCVWrite) {
+                      if (notifySusiCVWrite(MyBuffer[BufferR].B.arg1, CV_Index, CVValue) == CVValue) {   // for others, function with CV and index must be called
+                        SendACK();     // confirm
+                      }
+                    }
+                  }
+                }
+          } else {                                                  // K=0 for compare
+                if ((MyBuffer[BufferR].B.arg1 == 1) || (MyBuffer[BufferR].B.arg1 == 124)) {  // for index response is instant ...
+                  if (((CV_Index & BitMask) == 0) == ((MyBuffer[BufferR].B.arg2 & 0x08) == 0)) {SendACK();}                          // if they are same, confirm
+                } else {
+                  if (notifySusiCVRead) {                                                                     // If there is a CV storage system
+                    CVValue = notifySusiCVRead(MyBuffer[BufferR].B.arg1, CV_Index) & BitMask;
+                    if ((CVValue == 0) == ((MyBuffer[BufferR].B.arg2 & 0x08) == 0)) {SendACK();}                          // if they are same, confirm
                   }
                 }
               }
-            }
-		  } else {                                                  // K=0 for read
-            if ((MyBuffer[BufferR].B.arg1 == 1) || (MyBuffer[BufferR].B.arg1 == 124)) {
-              CV_Index &= BitMask;                          // for index response is instant ...
-              if ((CV_Index) == (MyBuffer[BufferR].B.arg2 & 0x08)) {SendACK();}                          // if they are same, confirm
-            } else {
-              if (notifySusiCVRead) {                                                                     // If there is a CV storage system
-                CVValue &= BitMask;
-                if (((CVValue) && 1) == ((MyBuffer[BufferR].B.arg2 & 0x08) && 1)) {SendACK();}                          // if they are same, confirm
-              }
-            }
-          }
         }
         break;
       case 0x7C:
