@@ -69,8 +69,8 @@ void setup() {                                                                  
 
     Serial.println("SUSI Print Raw Messages:");                                                                     // Welcome message
 
-    SUSI.init();                                                                                                    // library initialisation
     EEPROM.begin();                                                                                                 // init emulated eeprom
+    SUSI.init();                                                                                                    // library initialisation
 }
 
 void loop() {                                                                                                       // Code loop
