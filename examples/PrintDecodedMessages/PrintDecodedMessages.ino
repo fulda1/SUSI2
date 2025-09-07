@@ -1,16 +1,20 @@
 /*
-*   Questo esempio permette di vedere la corretta Acquisizione dei messaggi SUSI:
-*   -   Stampa a video i Comandi Decodificati Ricevuti
-*   -   Permette la lettura/scrittura delle CVs salvate nella EEPROM del Microcontrollore
+*   This example allows you to see the correct translation of SUSI messages:
+*   -   Print the received decoded commands on the screen
+*   -   Allows reading/writing of CVs saved in the Microcontroller's EEPROM
 */
+// note: as it contains lot of texts, it is recomentded to enable LTO optimalization.
 
-#include <stdint.h>     // Libreria per i tipi "uintX_t"
-#include <SUSI2.h>     // Includo la libreria per la gestione della SUSI
-//#include <EEPROM.h>     // Libreria per la gestione della EEPROM interna
+//#include <stdint.h>     // Library with types "uintX_t" (automatically included by Arduino)
+#include <SUSI2.h>        // Include the library for SUSI management
+#include <EEPROM.h>       // Library for managing the internal EEPROM - Note, CH32V003 have no eeprom, emulated version must be used
+                          // Note: The CH32 EEPROM library uses the user storage area, allowing 26 bytes of emulated EEPROM on the CH32V003.
+                          //       but SUSI can call up to 127 addresses + indexed area. Handle with care!
 
-SUSI2 SUSI(2, 3);      // (CLK pin, DATA pin) il pin di Clock DEVE ESSERE di tipo interrupt, il pin Data puo' essere in pin qualsiasi: compresi gli analogici
+//SUSI2 SUSI(2, 3);      // (CLK pin, DATA pin) this function is for compatiility only
+SUSI2 SUSI;            // new version does not needed pin definition, as it use hardware receiver on PC5 and PC6 pins.
 
-// Decommentare la #define sotto per stampare lo stato delle Funzioni Digitali
+// Uncomment the #define below to print the Digital Functions status
 #define NOTIFY_SUSI_FUNC
 #ifdef  NOTIFY_SUSI_FUNC
 void notifySusiFunc(SUSI_FN_GROUP SUSI_FuncGrp, uint8_t SUSI_FuncState) {
@@ -126,18 +130,24 @@ void notifySusiFunc(SUSI_FN_GROUP SUSI_FuncGrp, uint8_t SUSI_FuncState) {
 }
 #endif
 
-// Decommentare la #define sotto per stampare quando e' comandata una singola funzione
+// Uncomment the #define below to print when a binary state function is called (short and long version)
 #define NOTIFY_SUSI_BINARY_STATE
 #ifdef  NOTIFY_SUSI_BINARY_STATE
-void notifySusiBinaryState(uint16_t Command, uint8_t CommandState) {
+void notifySusiBinaryState(uint8_t Command, uint8_t CommandState) {
     Serial.print("notifySusiBinaryState: ");
+    Serial.print(Command);
+    Serial.print(" ; State: ");
+    Serial.println(CommandState);
+};
+void notifySusiBinaryStateL(uint16_t Command, uint8_t CommandState) {
+    Serial.print("notifySusiBinaryStateL (long): ");
     Serial.print(Command);
     Serial.print(" ; State: ");
     Serial.println(CommandState);
 };
 #endif
 
-// Decommentare la #define sotto per stampare lo stato delle AUX comandate direttamente dal Master
+// Uncomment the #define below to print the status of the AUXs controlled directly from the Master
 #define NOTIFY_SUSI_AUX
 #ifdef  NOTIFY_SUSI_AUX
 void notifySusiAux(SUSI_AUX_GROUP SUSI_auxGrp, uint8_t SUSI_AuxState) {
@@ -195,7 +205,7 @@ void notifySusiAux(SUSI_AUX_GROUP SUSI_auxGrp, uint8_t SUSI_AuxState) {
 }
 #endif
 
-// Decommentare la #define sotto per stampare quando e' richiesto un Trigger / Pulsazione
+// Uncomment the #define below to print when a Trigger Pulse is called
 #define NOTIFY_SUSI_TRIGGER_PULSE
 #ifdef  NOTIFY_SUSI_TRIGGER_PULSE
 void notifySusiTriggerPulse(uint8_t state) {
@@ -204,7 +214,7 @@ void notifySusiTriggerPulse(uint8_t state) {
 };
 #endif
 
-// Decommentare la #define sotto per stampare il consumo di corrente del motore
+// Uncomment the #define below to print the motor's current consumption
 #define NOTIFY_SUSI_MOTOR_CURRENT
 #ifdef  NOTIFY_SUSI_MOTOR_CURRENT
 void notifySusiMotorCurrent(int8_t current) {
@@ -213,7 +223,7 @@ void notifySusiMotorCurrent(int8_t current) {
 };
 #endif
 
-// Decommentare la #define sotto per stampare i dati della Velocita' Richiesta dalla Centrale al Decoder
+// Uncomment the #define below to print the Requested Speed ​​data from the Control Panel to the Decoder
 #define NOTIFY_SUSI_REQUEST_SPEED
 #ifdef  NOTIFY_SUSI_REQUEST_SPEED
 void notifySusiRequestSpeed(uint8_t Speed, SUSI_DIRECTION Dir) {
@@ -225,7 +235,7 @@ void notifySusiRequestSpeed(uint8_t Speed, SUSI_DIRECTION Dir) {
 };
 #endif
 
-// Decommentare la #define sotto per stampare i dati della Velocita' Reale
+// Uncomment the #define below to print actual speed data.
 #define NOTIFY_SUSI_REAL_SPEED
 #ifdef  NOTIFY_SUSI_REAL_SPEED
 void notifySusiRealSpeed(uint8_t Speed, SUSI_DIRECTION Dir) {
@@ -237,7 +247,7 @@ void notifySusiRealSpeed(uint8_t Speed, SUSI_DIRECTION Dir) {
 };
 #endif
 
-// Decommentare la #define sotto per stampare il Carico del motore
+// Uncomment the #define below to print the motor Load
 #define NOTIFY_SUSI_MOTOR_LOAD
 #ifdef  NOTIFY_SUSI_MOTOR_LOAD
 void notifySusiMotorLoad(int8_t load) {
@@ -246,7 +256,7 @@ void notifySusiMotorLoad(int8_t load) {
 };
 #endif
 
-// Decommentare la #define sotto per stampare lo stato dei comandi analogici
+// Uncomment the #define below to print the status of analog functions
 #define NOTIFY_SUSI_ANALOG_FUNCTION
 #ifdef  NOTIFY_SUSI_ANALOG_FUNCTION
 void notifySusiAnalogFunction(SUSI_AN_GROUP SUSI_AnalogGrp, uint8_t SUSI_AnalogState) {
@@ -295,7 +305,7 @@ void notifySusiAnalogFunction(SUSI_AN_GROUP SUSI_AnalogGrp, uint8_t SUSI_AnalogS
 }
 #endif
 
-// Decommentare la #define sotto per stampare i comandi 'Diretti Analogici'
+// Uncomment the #define below to print 'Direct Analog' commands
 #define NOTIFY_SUSI_ANALOG_DIRECT_COMMAND
 #ifdef  NOTIFY_SUSI_ANALOG_DIRECT_COMMAND
 void notifySusiAnalogDirectCommand(uint8_t commandNumber, uint8_t Command) {
@@ -307,17 +317,17 @@ void notifySusiAnalogDirectCommand(uint8_t commandNumber, uint8_t Command) {
 };
 #endif
 
-// Decommentare la #define sotto per stampare i comandi 'No Operation': serve a scopo di test
-//#define NOTIFY_SUSI_NO_OPERATION
+// Uncomment the #define below to print 'No Operation' commands - this is for testing purposes only.
+#define NOTIFY_SUSI_NO_OPERATION
 #ifdef  NOTIFY_SUSI_NO_OPERATION
 void notifySusiNoOperation(uint8_t commandArgument) {
     Serial.print("notifySusiNoOperation: ");
     Serial.print(" commandArgument: ");
-    Serial.println(commandArgument);
+    Serial.println(commandArgument,DEC);
 };
 #endif
 
-// Decommentare la #define sotto per stampare l'indirizzo del Decoder Master
+// Uncomment the #define below to print the Master decoder address
 #define NOTIFY_SUSI_MASTER_ADDRESS
 #ifdef  NOTIFY_SUSI_MASTER_ADDRESS
 void notifySusiMasterAddress(uint16_t MasterAddress) {
@@ -326,7 +336,7 @@ void notifySusiMasterAddress(uint16_t MasterAddress) {
 };
 #endif
 
-// Decommentare la #define sotto per stampare i comandi 'Controllo Modulo'
+// Uncomment the #define below to print the Module Control commands.
 #define NOTIFY_SUSI_MODULE_CONTROLL
 #ifdef  NOTIFY_SUSI_MODULE_CONTROLL
 void notifySusiControllModule(uint8_t ModuleControll) {
@@ -337,60 +347,62 @@ void notifySusiControllModule(uint8_t ModuleControll) {
 
 
 
-/* Metodi Per la Manipolazione delle CV */
+/* Methods for CV Manipulation */
 
-// Decommentare la #define sotto per mostrare il comando di Confronto CV
+// Uncomment the #define below to show the CV Compare command
 #define NOTIFY_SUSI_CV_READ
-uint8_t notifySusiCVRead(uint16_t CV) {
 #ifdef  NOTIFY_SUSI_CV_READ
+uint8_t notifySusiCVRead(uint8_t CV, uint8_t CVindex) {
     Serial.print("notifySusiCVRead: ");
     Serial.print(" CV: ");
     Serial.print(CV, DEC);
+    Serial.print(" Index: ");
+    Serial.print(CVindex, DEC);
     Serial.print(" Read Value: ");
-    //Serial.println(EEPROM.read(CV), DEC);
-    Serial.println("TBD");
+    if (CV < EEPROM.length()) {Serial.println(EEPROM.read(CV), DEC);} else {Serial.println("out of EEPROM");}
     
+    if (CV < EEPROM.length()) {return EEPROM.read(CV);} else {return 255;}
+}
 #endif
 
-    //return EEPROM.read(CV);
-}
-
-// Decommentare la #define sotto per mostrare il comando di Scrittura CV
+// Uncomment the #define below to show the CV Writing command
 #define NOTIFY_SUSI_WRITE
-uint8_t notifySusiCVWrite(uint16_t CV, uint8_t Value) {
 #ifdef  NOTIFY_SUSI_WRITE
+uint8_t notifySusiCVWrite(uint8_t CV, uint8_t CVindex, uint8_t Value) {
     Serial.print("notifySusiCVWrite: ");
     Serial.print(" CV: ");
     Serial.print(CV, DEC);
-    Serial.print(" Value to Check: ");
+    Serial.print(" Index: ");
+    Serial.print(CVindex, DEC);
+    Serial.print(" Value to Write: ");
     Serial.print(Value, DEC);
-#endif
 
-    //EEPROM.update(CV, Value);
-#ifdef  NOTIFY_SUSI_WRITE 
+    if (CV < EEPROM.length()) {EEPROM.write(CV, Value); EEPROM.commit();}       // commit every write is not effective!
+
     Serial.print(" New CV Value: ");
-    //Serial.println(EEPROM.read(CV), DEC);
-    Serial.println("TBD");
-#endif
+    if (CV < EEPROM.length()) {Serial.println(EEPROM.read(CV), DEC);} else {Serial.println("out of EEPROM");}
 
-    //return EEPROM.read(CV);
+    if (CV < EEPROM.length()) {return EEPROM.read(CV);} else {return 255;}
+    
 }
+ #endif
 
-// Decommentare la #define sotto per mostrare Quando viene richiesto un reset delle CVs
+// Uncomment the #define below to show when a CV reset is required
 #define NOTIFY_SUSI_CV_RESET
 #ifdef  NOTIFY_SUSI_CV_RESET
-void notifyCVResetFactoryDefault(void) {
-    Serial.println("notifyCVResetFactoryDefault");
+void notifyCVResetFactoryDefault(uint8_t Value) {
+    Serial.print("notifyCVResetFactoryDefault: ");
+    Serial.println(Value);
 }
 #endif
 
 // Uncomment the #define below to display when a unknown command is received.
 #define NOTIFY_SUSI_UNKNOWN
 #ifdef  NOTIFY_SUSI_UNKNOWN
-void notifySusiUnknownMessage(uint8_t firstByte, uint8_t secondByte) {                                                  // Funzione CallBack invocata quanto un messaggio e' in attesa di decodifica
+void notifySusiUnknownMessage(uint8_t firstByte, uint8_t secondByte) {                                                  
     Serial.print("notifySusiUnknownMessage : ");
 
-    Serial.print(" ( 0x");                                                                                            // Stampo il valore Decimale dei Byte ricevuti
+    Serial.print(" ( 0x");                                                                                            
     Serial.print(firstByte < 16 ? "0" : "");
     Serial.print(firstByte, HEX); 
     Serial.print(", 0x"); 
@@ -400,15 +412,17 @@ void notifySusiUnknownMessage(uint8_t firstByte, uint8_t secondByte) {          
 }
 #endif
 
-void setup() {                                                                                                      // Setup del Codice
-    Serial.begin(115200);                                                                                           // Avvio la comunicazione Seriale
-    while (!Serial) {}                                                                                              // Attendo che la comunicazione seriale sia disponibile
+void setup() {                                                                                                      // Setup Code
+    Serial.begin(115200);                                                                                           // Starting Serial Communication
+    while (!Serial) {}                                                                                              // Waiting for serial communication to be available
 
-    Serial.println("SUSI Print Decoded Messages:");                                                                 // Messaggio di Avvio
+    Serial.println("SUSI Print Decoded Messages:");                                                                 // Welcome message
 
-    SUSI.init();                                                                                                    // Avvio la libreria
+    SUSI.init();                                                                                                    // library initialisation
+    EEPROM.begin();                                                                                                 // init emulated eeprom
+
 }
 
-void loop() {                                                                                                       // Loop del codice
-    SUSI.process();                                                                                                 // Elaboro piu' volte possibile i dati acquisiti dalla libreria
+void loop() {                                                                                                       // Code loop
+    SUSI.process();                                                                                                 // Process the data acquired from the library as many times as possible
 }
