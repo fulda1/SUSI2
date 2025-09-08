@@ -337,8 +337,8 @@ The following data types are used by the library methods/functions, they are *sy
 SUSI_DIRECTION
 ```
 It *symbolically* identifies the direction transmitted by the Master Decoder: </br>
-- SUSI_DIR_REV : Direzion *reverse*
-- SUSI_DIR_FWD : Direzion *forward*
+- SUSI_DIR_REV : Direction *reverse*
+- SUSI_DIR_FWD : Direction *forward*
 
 ------------
 
