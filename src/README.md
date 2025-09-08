@@ -1,274 +1,325 @@
-# API Libreria
+# Library API
 
-* [Metodi Obbligatori](#Metodi-Obbligatori)
-* [Funzioni CallBack](#Funzioni-CallBack)
-* [Manipolazione CVs](#Manipolazione-CVs)
-* [Distruzione Classe](#distruzione-classe)
-* [Tipi di Dati](#Tipi-di-Dati)
+* [Mandatory Methods](#Mandatory-Methods)
+* [CallBack Functions](#CallBack-Functions)
+* [CVs manipulation](#CVs-manipulation)
+* [Class Destructor](#Class-Destructor)
+* [Data Types](#Data-Types)
 
 ------------
 
-# Metodi Obbligatori
-I seguenti metodi sono **obbligatori** per il corretto funzionamento della libreria.
+# Mandatory Methods
+The following methods are **mandatory** for correct function of the library.
 
 ------------
 
 ```c
-Rcn600(CLK_pin, DATA_pin);
+SUSI2();
 ```
-Dichiarazione delle libreria nella quale inserire i pin a cui e' collegato il Bus SUSI.<br/>
-Il pin CLK **deve essere** di tipo ***Interrupt***, il pin Data *puo'* essere di qualsiasi tipo (compresi analogici).
+Default constructor.<br/>
+As libryry use hardware components, plus it is mandatory to have input pins 5V tolerant, *Clock* pin must be always pin **PC5**, and *Data* pin must be always pin **PC6**.
 
-**OPPURE**
+**OR**
 
 ```c
-Rcn600(EXTERNAL_CLOCK, DATA_pin);
+SUSI2(CLK_pin, DATA_pin);
 ```
-Dichiarazione delle libreria per l'acquisizione del Clock mediante **PortChangeInterrupt**</br>
-Il pin Data *puo'* essere di qualsiasi tipo (compresi analogici).</br>
+Library declaration ~~in which to insert the pins to which the SUSI Bus is connected~~.<br/>
+~~The CLK pin **must* be of type ***Interrupt***, the Data pin *can* be of any type (including analog)~~.<br/>
+_This is for compatibility only. Pin numbers are ignored_
+
+**OR**
+
+```c
+SUSI2(EXTERNAL_CLOCK, DATA_pin);
+```
+~~Library declaration for clock acquisition using PortChangeInterrupt~~.</br>
+~~The Data pin *can* be any type (including analog)~~.</br>
+_This is for compatibility only. Pin numbers are ignored_
 
 ------------
 
 ```c
 void init(void);
 ```
-***oppure***
+***OR***
 ```c
 void init(uint8_t SlaveAddress);
 ```
-**E' necessario** invocarlo nel 'setup' del codice: avvia la gestione dell'interrupt e inizializza i contatori interni.
+**It is necessary** to invoke it in the 'setup' code: it starts the interrupt handling and initializes the internal counters.
 
-Il metodo **senza il parametro** utilizza, *se presente*, il metodo di lettura CVs per determinare l'indirizzo del modulo (*salvato nella CV 897*), se il metodo *e' assente* utilizza indirizzo **di default: 1**.
+The method **without the parameter** uses, *if present*, the CVs reading method to determine the module address (*saved in CV 897 (0)*), if the method *is absent* it uses the **default address: 1**.<br/>
+In case your processor requiere initialization of EEPROM *(for example emulated EEPROM on CH32V003)*, EEPROM initialization must perform **before** this library initialization.
 
-Il metodo **con il parametro** *permette di specificare l'indirizzo del modulo*: **PUO' AVERE VALORE**: 1, 2, 3.</br>
-In caso di valore diverso verra' utilizzato il valore **di default: 1**.
+The method **with parameter** *allows you to specify the address of the module*: **CAN HAVE VALUE**: 1, 2, 3.</br>
+If the value is different, the default value of 1 will be used.
 
 ------------
 
 ```c
 uint8_t process(void);
 ```
-**E' necessario invocarlo piu' volte possibile** nel 'loop' del codice: decodifica il pacchetto SUSI.
+**It is necessary to invoke it as many times as possible** in the code 'loop': it decrypts the SUSI packet.
 - Input:
-  - Nulla
-- Restituisce:
-  -  -1 **Messaggio Non Valido**
-  -  0  Nessun Messaggio in Coda di Decodifica
-  -  1  **Messaggio Valido**
+  - Nothing
+- Returns:
+  -  -1 **Invalid Message** *(one of messages in queue was not recognized, `notifySusiUnknownMessage` callback can be used for notification)*
+  -  0  No Messages in Decoding Queue
+  -  1  **Valid Message(s)** *(queue contain one or more valir messages)*
 
 ------------
 
-# Funzioni CallBack
-Le seguenti funzioni CallBack sono **facoltative** (definiti come 'extern' alla libreria), e permettono all'utente di definire il comportamento da adottare in caso di un particolare comando.</br>
+# CallBack Functions
+The following CallBack functions are **optional** (defined as 'extern' to the library), and allow the user to define the behavior to adopt in case of a particular command.</br>
 
 ------------
 
 ```c
 void notifySusiFunc(SUSI_FN_GROUP SUSI_FuncGrp, uint8_t SUSI_FuncState);
 ```
-*notifySusiFunc()* viene invocato quando: si ricevono i dati dal Master su un gruppo di funzioni digitali:
+*notifySusiFunc()* is called when: receiving data from the Master on a group of digital functions:
 * Input:
-  - il gruppo Funzioni decodificato
-  - lo stato del gruppo funzioni
-* Restituisce:
-  - Nulla
+  - the decoded Functions group (see [Data Types](#Data-Types))
+  - the status of the function group
+* Returns:
+  - Nothing
 
 ------------
 
 ```c
-void notifySusiBinaryState(uint16_t Command, uint8_t CommandState);
+void notifySusiBinaryState(uint8_t Command, uint8_t CommandState);
 ```
-*notifySusiBinaryState()* viene invocato quando: si ricevono i dati dal Master sullo stato di UNA specifica funzione:
+
+**AND**
+
+```c
+void notifySusiBinaryStateL(uint16_t Command, uint8_t CommandState);
+```
+
+*notifySusiBinaryState()* it is invoked when: data is received from the Master on the status of a specific state function:
 - Input:
-  - il numero della funzione (da 1 a 32767)
-  - lo stato della Funzione (attiva = 1, disattiva = 0)
-- Restituisce:
-  - Nulla
+  - the state function number (short version from 1 to 127; long version from 0 to 32767; 0 means broadcast for all)
+  - the state of the function (active = 1, inactive = 0)
+- Returns:
+  - Nothing
 
 ------------
 
 ```c
 void notifySusiAux(SUSI_AUX_GROUP SUSI_auxGrp, uint8_t SUSI_AuxState);
 ```
-*notifySusiAux()* viene invocato quando: si ricevono i dati dal Master sullo stato di UNA specifica AUX:
+*notifySusiAux()* it is invoked when: data is received from the Master on the status of a specific AUX:
 - Input:
-  - il numero dell'AUX
-  - lo stato dell'uscita (attiva = 1, disattiva = 0)
-- Restituisce:
-  - Nulla
+  - the AUX number
+  - the output state (active = 1, inactive = 0)
+- Returns:
+  - Nothing
 
 ------------
 
 ```c
 void notifySusiTriggerPulse(uint8_t state);
 ```
-notifySusiTriggerPulse() viene invocato quando: si riceve dal Master il comando di Trigger (o pulsazione) per eventuali sbuffi di vapore
+notifySusiTriggerPulse() The command is used for synchronization of a steam impulse. It is sent once per steam pulse.
 - Input:
-  - stato del comando Trigger/Pulse
-- Restituisce:
-  - Nulla
+  - Trigger/Pulse command status (1=steam pulse, rest is reserved)
+- Returns:
+  - Nothing
 
 ------------
 
 ```c
 void notifySusiMotorCurrent(int8_t current);
 ```
-*notifySusiMotorCurrent()* viene invocato quando: si riceve dal Master i dati sull'assorbimento di Corrente da parte del Motore
+*notifySusiMotorCurrent()* it is invoked when: data on the current consumed by the motor is received from the Master
 - Input:
-  - Assorbimento di Corrente: da -128 a + 127 (gia' convertita dal Complemento a 2 originale)
-- Restituisce:
-  - Nulla
+  - Current Draw: -128 to +127 (already converted from original 2's Complement; negative values mean regeneration as it is possible with modern electric locomotives)
+- Returns:
+  - Nothing
 
 ------------
 
 ```c
 void notifySusiRequestSpeed(uint8_t Speed, SUSI_DIRECTION Dir);
 ```
-*notifySusiRequestSpeed()* viene invocato quando: si ricevono i dati sulla Velocita' e sulla Direzione richiesti dalla Centrale al Master
+*notifySusiRequestSpeed()* it is invoked when: the data on Requested Speed ​​and Direction requested by the Control Unit are received from the Master
 - Input:
-  - la velocita' (128 step) richiesta
-  - la direzione richiesta
-- Restituisce:
-  - Nulla
+  - requested speed (128 steps)
+  - requested direction
+- Returns:
+  - Nothing
 
 ------------
 
 ```c
 void notifySusiRealSpeed(uint8_t Speed, SUSI_DIRECTION Dir);
 ```
-*notifySusiRealSpeed()* viene invocato quando: si ricevono i dati dal Master sulla Velocita' e sulla Direzione reali 
+*notifySusiRealSpeed()* It is invoked when: data on the Actual Speed ​​and Direction are received from the Master
 - Input:
-  - la velocita' (128 step) reale
-  - la direzione reale
-- Restituisce:
-  - Nulla
+  - actual speed (128 steps)
+  - actual direction
+- Returns:
+  - Nothing
+
+------------
+
+```c
+void notifySusiDCCSpeed(uint8_t Speed, SUSI_DIRECTION Dir);
+```
+*notifySusiDCCSpeed()* It is invoked when: data on the DCC Speed ​​and Direction are received from the Master (Speed as it is presented on DCC without applying speed curves)
+- Input:
+  - DCC speed (128 steps)
+  - DCC direction
+- Returns:
+  - Nothing
 
 ------------
 
 ```c
 void notifySusiMotorLoad(int8_t load);
 ```
-*notifySusiAnalogFunction()* viene invocato quando: si riceve dal Master i dati sul carico del Motore
+*notifySusiAnalogFunction()* it is invoked when: data on the motor load is received from the Master
 - Input:
-  - Carico del Motore: da -128 a + 127 (gia' convertita dal Complemento a 2 originale)
-- Restituisce:
-  - Nulla
+  - Engine Load: -128 to +127
+- Returns:
+  - Nothing
 
 ------------
 
 ```c
 void notifySusiAnalogFunction(SUSI_AN_GROUP SUSI_AnalogGrp, uint8_t SUSI_AnalogState);
 ```
-*notifySusiAnalogFunction()* viene invocato quando: si ricevono i dati dal Master su un gruppo di funzioni analogiche
+*notifySusiAnalogFunction()* It is invoked when: receiving data from the Master on analog functions
 - Input:
-  - il gruppo Analogico decodificato
-  - lo stato del gruppo
-- Restituisce:
-  - Nulla
+  - the decoded Analog function (8 functions available)
+  - the value of the function
+- Returns:
+  - Nothing
 
 ------------
 
 ```c
 void notifySusiAnalogDirectCommand(uint8_t commandNumber, uint8_t Command);
 ```
-*notifySusiAnalogDirectCommand()* viene invocato quando: si ricevono i dati dal Master i comandi diretti per il funzionamento analogico
+*notifySusiAnalogDirectCommand()* It is invoked when: data is received from the Master direct commands for analog operation (Setting of basic functions in analog mode bypassing a function assignment.)
 - Input:
-  - il numero del comando: 1 o 2
-  - i bit del comando
-- Restituisce:
-  - Nulla
+  - the command number: 1 or 2
+  - the command bits (Command 1: Bit 0: Sound on/off; Bit 1: Up/break; Bit 7: Reduced volume / Command 2: Bit 0: Front light; Bit 1: Rear light; Bit 2: Parking light)
+- Returns:
+  - Nothing
 
 ------------
 
 ```c
 void notifySusiMasterAddress(uint16_t MasterAddress);
 ```
-*notifySusiMasterAddress()* viene invocato quando: si riceve l'indirizzo digitale del Master
+*notifySusiMasterAddress()* it is invoked when: the digital address of the Master is received
 - Input:
-  - l'indirizzo Digitale del Master
-- Restituisce:
-  - Nulla
+  - the Master's prmary Digital Address
+- Returns:
+  - Nothing
 
 ------------
 
 ```c
 void notifySusiControllModule(uint8_t ModuleControll);
 ```
-*notifySusiControlModule()* viene invocato quando: si riceve il comando sul controllo del modulo
+*notifySusiControlModule()* It is invoked when: the command on the module control is received
 - Input:
-  - byte contenete il controllo del modulo
-- Restituisce:
-  - Nulla
+  - bytes containing the form control (Bit 0 = Buffer Control: 0 = Buffer off, 1 = Buffer on; Bit 1 = Reset function: 0 = set all functions to "Off", 1 = normal operation; If implemented, bits 0 and 1 must be set to 1 in the SUSI-Module after a reset.)
+- Returns:
+  - Nothing
 
 ------------
 
-**LA SEGUENTE CHIAMATA PUO' ESSERE USATA PER DEBUG O PER ESTRAPOLARE I DATI *GREZZI* ACQUISITI DALLA LIBRERIA**
+```c
+void notifySusiNoOperation(uint8_t commandArgument);
+```
+*notifySusiNoOperation()* It is invoked when: The command does not cause any action in the SUSI-Module. The data can have any value.
+- Input:
+  - the command argument (can be anything)
+- Returns:
+  - Nothing
+
+------------
+
+**THE FOLLOWING CALL CAN BE USED FOR DEBUG OR TO EXTRAPOLATE THE *RAW* DATA ACQUIRED BY THE LIBRARY**
 
 ```c
 void notifySusiRawMessage(uint8_t firstByte, uint8_t secondByte);
 ```
-*notifySusiRawMessage()* viene invocato ogni volta che è presente un messaggio (2 Byte) da decodificare. NON viene invocato per i Messaggi di Manipolazione CVs. Mostra il messaggio Grezzo: NON DECODIFICATO.
+
+**AND**
+
+```c
+void notifySusiRawMessage3b(uint8_t firstByte, uint8_t secondByte, uint8_t thirdByte);
+```
+
+*notifySusiRawMessage()* It is invoked whenever there is a message (2 Bytes or 3 bytes) to be decode. Standard messages are 2 bytes, CV manipulation messages are 3 bytes.
 * Input:
-  - il Primo Byte del Messaggio
-  - il Secondo Byte de Messaggio
-* Restituisce:
-  - Nulla
+  - The First Byte of the Message (command)
+  - The Second Byte of the Message (argument)
+  - The Third Byte of the Message (value)
+* Returns:
+  - Nothing
 
 ------------
 
-# Manipolazione CVs
-Le seguenti funzioni sono **facoltative** (definite come 'extern' alla libreria), ma permettono alla libreria di dialogare con il Decoder Master in caso di *Lettura/Scrittura CVs*</br>
-La libreria **gestisce l'ACK** che permette al decoder di conoscere l'esito dell'operazione richiesta.
-
-------------
-
-```c
-uint8_t notifySusiCVRead(uint16_t CV);
-```
-*notifySusiCVRead()* viene invocato quando: e' richiesta la lettura di una CV
-- Input:
-  - il numero della CV da leggere
-- Restituisce:
-  - il valore della CV letta
+# CVs manipulation
+The following functions are **optional** (defined as 'external' to the library), but they allow the library to communicate with the Master Decoder in the event of *Read/Write CVs*.</br>
+The library **handles the ACK** that allows the decoder to know the outcome of the requested operation.
 
 ------------
 
 ```c
-uint8_t notifySusiCVWrite(uint16_t CV, uint8_t Value);
+uint8_t uint8_t notifySusiCVRead(uint8_t CV, uint8_t CVindex);
 ```
-*notifySusiCVWrite()* viene invocato quando: e' richiesta la Scrittura di una CV.
+*notifySusiCVRead()* It is invoked when: reading a CV is requested
 - Input:
-  - il numero della CV richiesta
-  - il Nuovo valore della CV
-- Restituisce:
-  - il valore letto (post scrittura) della CV da scrivere
+  - the CV number to read (CV numbers as they are valid for Slave -> CV#897 mean value 0; CV#898 mean value 1, .. CV#1024 mean value 127)
+  - the CV Index (some CVs are mandatory indexed, for example 900(3), 901(4), 940(43), etc.)
+- Returns:
+  - readed value of the CV
+
+------------
+
+```c
+uint8_t uint8_t notifySusiCVWrite(uint8_t CV, uint8_t CVindex, uint8_t Value);
+```
+*notifySusiCVWrite()* it is invoked when: writing a CV is required.
+- Input:
+  - the CV number to read (CV numbers as they are valid for Slave -> CV#897 mean value 0; CV#898 mean value 1, .. CV#1024 mean value 127)
+  - the CV Index (some CVs are mandatory indexed, for example 900(3), 901(4), 940(43), etc.)
+  - the value of CV to be written
+- Returns:
+  - readed (post-write) value of the CV to be written
 
 ------------
 
 RESET CVs, viene utilizzato la *stessa funzione* della Libreria [NmraDcc](https://github.com/mrrwa/NmraDcc):</br>
 ```c
-void notifyCVResetFactoryDefault(void);
+void void notifyCVResetFactoryDefault(uint8_t Value);
 ```
 *notifyCVResetFactoryDefault()* Called when CVs must be reset. This is called when CVs must be reset to their factory defaults.
 - Inputs:
-  - None                                                                                                       
+  - the value used for reset (majority of decoders use value 8 for reset, but other can be used as well)
 - Returns:
   - None
 
 ------------
 
-# Distruzione Classe
-E' possibile distruggere la Classe se non piu' necessaria.
+# Class Destructor
+It is possible to destroy the Class if it is no longer needed.
 ```c
 ~Rcn600(void);	
 ```
 
-Le risorse verranno deallocate, i pin verranno messi nello stato di **INPUT** per evitare danni accidentali.
+Resources will be deallocated, pins will be kept into **INPUT** state to prevent accidental corruption.
  
 ------------
 
-# Tipi di Dati
-I seguenti tipi di dati vengono utilizzati dai metodi/funzioni della libreria, *sono tipi simbolici* definiti tramite "#define" e servono a migliorare la leggibilita' del codice, corrispondono al tipo *uint8_t*</br>
+# Data Types
+The following data types are used by the library methods/functions, they are *symbolic types* defined via "#define" and serve to improve the readability of the code, they correspond to the *uint8_t* type</br>
 
 ```c
 #define	SUSI_DIRECTION		uint8_t
@@ -285,50 +336,50 @@ I seguenti tipi di dati vengono utilizzati dai metodi/funzioni della libreria, *
 ```c
 SUSI_DIRECTION
 ```
-Identifica *simbolicamente* la direzione trasmessa dal Decoder Master: </br>
-- SUSI_DIR_REV : Direzione *reverse*
-- SUSI_DIR_FWD : Direzione *forward*
+It *symbolically* identifies the direction transmitted by the Master Decoder: </br>
+- SUSI_DIR_REV : Direzion *reverse*
+- SUSI_DIR_FWD : Direzion *forward*
 
 ------------
 
 ```c
 SUSI_FN_GROUP
 ```
-Identifica *simbolicamente* il gruppo di Funzioni Digitali trasmesse dal Decoder Master:</br>
-- SUSI_FN_0_4 : Funzioni dalla 0 alla 4
-- SUSI_FN_5_12 : Funzioni dalla 5 alla 12
-- SUSI_FN_13_20 : Funzioni dalla 13 alla 20
-- SUSI_FN_21_28 : Funzioni dalla 21 alla 28
-- SUSI_FN_29_36 : Funzioni dalla 29 alla 36
-- SUSI_FN_37_44 : Funzioni dalla 37 alla 44
-- SUSI_FN_45_52 : Funzioni dalla 45 alla 52
-- SUSI_FN_53_60 : Funzioni dalla 53 alla 60
-- SUSI_FN_61_68 : Funzioni dalla 61 alla 68
+It *symbolically* identifies the group of Digital Functions transmitted by the Master Decoder:</br>
+- SUSI_FN_0_4 : Functions 0 to 4
+- SUSI_FN_5_12 : Functions 5 to 12
+- SUSI_FN_13_20 : Functions 13 to 20
+- SUSI_FN_21_28 : Functions 21 to 28
+- SUSI_FN_29_36 : Functions 29 to 36
+- SUSI_FN_37_44 : Functions 37 to 44
+- SUSI_FN_45_52 : Functions 45 to 52
+- SUSI_FN_53_60 : Functions 53 to 60
+- SUSI_FN_61_68 : Functions 61 to 68
 
 ------------
 
 ```c
 SUSI_AUX_GROUP
 ```
-Identifica *simbolicamente* il gruppo di AUXs trasmesse dal Decoder Master:</br>
-- SUSI_AUX_1_8 : AUX dalla 1 alla 8
-- SUSI_AUX_9_16 : AUX dalla 9 alla 16
-- SUSI_AUX_17_24 : AUX dalla 17 alla 24
-- SUSI_AUX_25_32 : AUX dalla 25 alla 32
+It *symbolically* identifies the group of AUXs transmitted by the Master Decoder:</br>
+- SUSI_AUX_1_8 : AUX 1 to 8
+- SUSI_AUX_9_16 : AUX 9 to 16
+- SUSI_AUX_17_24 : AUX 17 to 24
+- SUSI_AUX_25_32 : AUX 25 to 32
 
 ------------
 
 ```c
 SUSI_AN_FN_GROUP
 ```
-Identifica *simbolicamente* il gruppo di Funzioni Analogiche trasmesse dal Decoder Master:</br>
-- SUSI_AN_FN_0_7 : Funzioni Analogiche dalla 0 alla 7
-- SUSI_AN_FN_8_15 : Funzioni Analogiche dalla 8 alla 15
-- SUSI_AN_FN_16_23 : Funzioni Analogiche dalla 16 alla 23
-- SUSI_AN_FN_24_31 : Funzioni Analogiche dalla 24 alla 31
-- SUSI_AN_FN_32_39 : Funzioni Analogiche dalla 32 alla 39
-- SUSI_AN_FN_40_47 : Funzioni Analogiche dalla 40 alla 47
-- SUSI_AN_FN_48_55 : Funzioni Analogiche dalla 48 alla 55
-- SUSI_AN_FN_56_63 : Funzioni Analogiche dalla 56 alla 63
+It *symbolically* identifies the group of Analogue Functions transmitted by the Master Decoder:</br>
+- SUSI_AN_FN_1 : Analog function 1
+- SUSI_AN_FN_2 : Analog function 2
+- SUSI_AN_FN_3 : Analog function 3
+- SUSI_AN_FN_4 : Analog function 4
+- SUSI_AN_FN_5 : Analog function 5
+- SUSI_AN_FN_6 : Analog function 6
+- SUSI_AN_FN_7 : Analog function 7
+- SUSI_AN_FN_8 : Analog function 8
 
 ------------
