@@ -4,7 +4,7 @@ At minimum trying to keep same interface.
 Main change is, that this one is developed for little more actual processor CH32V003. (with theoretical upgrade to other CH32V.. family, and some STM32.. family)
 
 # Index
-* [Introduction Rcn600 SUSI](#S-9.4.1-Rcn600-SUSI)
+* [Introduction SUSI](#S-9.4.1-Rcn600-SUSI)
 * [Video Example](#Video-Example)
 * [Library API](#Library-API)
 * [Examples of Use](#Examples-of-Use)
@@ -12,7 +12,10 @@ Main change is, that this one is developed for little more actual processor CH32
 ------------
 
 # S-9.4.1 Rcn600 SUSI
-This library allows you to use an Arduino board with chip CH32V003F4 (or a microcontroller via Arduino IDE) as a Slave for the SUSI interface.<br/>
+SUSI (Serial User Standard Interface) is communication standard inside locomotive (train bus) developed by [Dietz Elektronik GmbH](https://www.d-i-e-t-z.de/), adopted by [Rail Community](https://railcommunity.de/) and [NMRA](https://www.nmra.org/).<br/>
+Rail Community adopted this standard as [RCN-600](https://normen.railcommunity.de/RCN-600.pdf), NMRA adopted it as S-9.4.1 (currentely [under revision](https://www.nmra.org/documents-under-revision)).<br/>
+
+This library allows you to use an Arduino board with chip CH32V003F4 (or similar) as a Slave for the SUSI interface.<br/>
 Library tested on Nano RISC-V CH32V003 (CH32V003F4U6).</br>
 
 To work, you need 2 resistors **470Ω in series** on the SUSI lines (Clock and Data).<br/>
@@ -20,8 +23,6 @@ On procesor CH32V003 *Clock* must be connicted to pin PC5 (SPI_SCK) and *Data* m
 <img src="https://raw.githubusercontent.com/fulda1/SUSI2/refs/heads/main/wiring.png" width="942"><br/>
 Simplified schematic:<br/>
 <img src="https://raw.githubusercontent.com/fulda1/SUSI2/refs/heads/main/schematic.jpeg">
-
-More information about the specification in the file [RCN-600.pdf](https://github.com/TheFidax/Rcn600/blob/master/RCN-600.pdf).
 
 ------------
 
