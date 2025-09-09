@@ -97,7 +97,7 @@ void ReadMyCVs(void) {                                                          
   } else {
     MemValue += 3;
     FAGroup = MemValue / 8;
-    FABit = 1 << (MemValue % 1);
+    FABit = 1 << (MemValue % 8);
   }
 
   MemValue = EEPROM.read(2);                                                                                        // Output #2 function in my case
@@ -111,7 +111,7 @@ void ReadMyCVs(void) {                                                          
   } else {
     MemValue += 3;
     FBGroup = MemValue / 8;
-    FBBit = 1 << (MemValue % 1);
+    FBBit = 1 << (MemValue % 8);
   }
 }
 
