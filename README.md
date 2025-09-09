@@ -29,8 +29,8 @@ Simplified schematic:<br/>
 ------------
 
 # Video Example
-TBD<br/>
-[![Video Presentazione](https://img.youtube.com/vi/VzgkDouOvCY/0.jpg)](http://www.youtube.com/watch?v=VzgkDouOvCY)
+
+[![Video Example](https://img.youtube.com/vi/F4uDv5WQdg8/0.jpg)](http://www.youtube.com/watch?v=F4uDv5WQdg8)
 
 ------------
 
