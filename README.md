@@ -1,3 +1,5 @@
+<P ALIGN="right"><img src="https://raw.githubusercontent.com/fulda1/SUSI2/refs/heads/main/susi_logo.svg"></P>
+
 # Introduction
 This library is heavily inspired by https://github.com/TheFidax/Rcn600/
 At minimum trying to keep same interface.
@@ -20,7 +22,7 @@ Library tested on Nano RISC-V CH32V003 (CH32V003F4U6).</br>
 
 To work, you need 2 resistors **470Ω in series** on the SUSI lines (Clock and Data).<br/>
 On procesor CH32V003 *Clock* must be connicted to pin PC5 (SPI_SCK) and *Data* must be connected to pin PC6 (SPI_MOSI). Both pins are 5V tolerant (as requested in specification).<br/>
-<img src="https://raw.githubusercontent.com/fulda1/SUSI2/refs/heads/main/wiring.png" width="942"><br/>
+<img src="https://raw.githubusercontent.com/fulda1/SUSI2/refs/heads/main/wiring.png"><br/>
 Simplified schematic:<br/>
 <img src="https://raw.githubusercontent.com/fulda1/SUSI2/refs/heads/main/schematic.jpeg">
 
