@@ -26,12 +26,12 @@ void notifySusiFunc(SUSI_FN_GROUP SUSI_FuncGrp, uint8_t SUSI_FuncState) {       
     }
 }
 
-uint8_t notifySusiCVRead(uint16_t CV) {                                                                             // CallBack function to read the value of a stored CV
+uint8_t notifySusiCVRead(uint16_t CV, uint8_t CVindex) {                                                            // CallBack function to read the value of a stored CV
     if (CV < EEPROM.length()) {return EEPROM.read(CV);} else {return 255;}                                          // Returns the value stored in EEPROM
 
 }
 
-uint8_t notifySusiCVWrite(uint16_t CV, uint8_t Value) {                                                             // CallBack function to write the value of a stored CV
+uint8_t notifySusiCVWrite(uint16_t CV, uint8_t CVindex, uint8_t Value) {                                            // CallBack function to write the value of a stored CV
                                                                                                                     // If the required value is different I update the EEPROM, otherwise I do not modify it so as not to damage it.
     if (CV < EEPROM.length()) {EEPROM.write(CV, Value); EEPROM.commit();}       // commit every write is not effective!
 
