@@ -24,6 +24,8 @@ SUSI2::SUSI2() {                                                                
 }                                                                                                       // empty for now
 
 SUSI2::SUSI2(uint8_t CLK_pin, uint8_t DATA_pin) {                                                       // Class constructor
+  (void)(CLK_pin);                                                                                      // Have no usage for parameter "CLK_pin", will mark it as "unused"
+  (void)(DATA_pin);                                                                                     // Have no usage for parameter "DATA_pin", will mark it as "unused"
 }                                                                                                       // This one is for compatibility only. Pin assignment is fixed for the hardware
 
 SUSI2::~SUSI2(void) {                                                                                   // Class Destructor
