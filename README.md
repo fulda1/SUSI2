@@ -1,3 +1,10 @@
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/fulda1/SUSI2)
+![GitHub Release Date](https://img.shields.io/github/release-date/fulda1/SUSI2)
+![GitHub commits since latest release (by date)](https://img.shields.io/github/commits-since/fulda1/SUSI2/latest)
+[![GitHub stars](https://img.shields.io/github/stars/fulda1/SUSI2)](https://github.com/fulda1/SUSI2/stargazers)
+[![arduino-library-badge](https://www.ardu-badge.com/badge/SUSI2.svg)](https://www.ardu-badge.com/SUSI2)
+[![License](https://img.shields.io/github/license/fulda1/SUSI2)](#)
+
 <P ALIGN="right"><img src="https://raw.githubusercontent.com/fulda1/SUSI2/refs/heads/main/susi_logo.svg"></P>
 
 # Introduction
