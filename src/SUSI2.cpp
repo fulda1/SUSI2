@@ -13,6 +13,11 @@
 
 #include "SUSI2.h"                                                                                 // Header
 
+#ifdef  TIM_MODULE_ENABLED
+#include <HardwareTimer.h>                                                    // Include HardwareTimer for compatibility
+HardwareTimer myTimer(TIM1);                                                  // define object, to present we occupy Timer 1
+#endif
+
 SUSI2* pointerToSUSI;                                                         // Pointer to the SUSI Class
 PacketT partial;                                                              // partially received packet - used in ISR routine
 uint8_t ByteCount;                                                            // Counter of bytes in packet - used in ISR routine
@@ -135,31 +140,35 @@ void SPI1_IRQHandler(void)
 }
 #endif
 
-// Interrupt functions must have "C" linkage!!!
-#ifdef __cplusplus
-extern "C" {
-#endif
-
+#ifdef  TIM_MODULE_ENABLED
+/*********************************************************************
+ * @fn      timerHandler
+ * @brief   This function handles TIM1 UP exception (reset of communication).
+ * @return  none
+ */
+void timerHandler(void)
+#else
+extern "C" {                                        // Interrupt functions must have "C" linkage!!!
 void TIM1_UP_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
 
 /*********************************************************************
  * @fn      TIM1_UP_IRQHandler
- * @brief   This function handles TIM1 UP exception.
+ * @brief   This function handles TIM1 UP exception (reset of communication).
  * @return  none
  */
 void TIM1_UP_IRQHandler(void)
+#endif
+
 {
-    // Note: same IRQ handler is defined in HardwareTimer. To avoid conflict, disable: //#define TIM_MODULE_ENABLED
-    //       in file C:\Users\<user>\AppData\Local\Arduino15\packages\WCH\hardware\ch32v\1.0.4\variants\CH32V00x\CH32V003F4\variant_CH32V003F4.h
     SPI1->CTLR1 |= SPI_NSSInternalSoft_Set ;        // initialize SPI receiver by pulse of SS bit (internal one)
     SPI1->CTLR1 &= SPI_NSSInternalSoft_Reset;       // bo back to active state
     TIM_ClearITPendingBit( TIM1, TIM_IT_Update );   // reset interrupt flag
     ByteCount=0;                                    // reset counter of bytes in packet
     partial.W=0;                                    // empty partially received data
 }
-
-#ifdef __cplusplus
-}
+#ifdef  TIM_MODULE_ENABLED
+#else
+}                                                   // end of extern
 #endif
 
 /**********************************************************************************************************************/
@@ -260,7 +269,13 @@ void SUSI2::initTimer1() {     // Timer 1 in "slave" mode.
 
     //pinMode(SPI_SCK,INPUT); // SUSI data - already done in SPI
 
+
+#ifdef  TIM_MODULE_ENABLED
+    myTimer.setOverflow(7000, MICROSEC_FORMAT); // 7 milisecond reset rate        This part is for HardwareTimer compatibility only
+    myTimer.attachInterrupt(timerHandler);                                     // This part is for HardwareTimer compatibility only
+#else
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE );   // enable clock for timer
+#endif
 
 //R16_TIM1_CTLR1  Control register 1
 // 0000 0000 0000 0100 = 0x0004
@@ -318,7 +333,12 @@ void SUSI2::initTimer1() {     // Timer 1 in "slave" mode.
 void SUSI2::SendACK() {
   pinMode(SPI_MOSI,OUTPUT_OD);  // change pin to output, with open drain
   digitalWrite(SPI_MOSI, LOW);  // set it to low
-  delay(2);                     // 1.5 will be better
+  delay(2);                     // ch32 does not look for "half" milisecond, so delay(2) mean more than 1, less than 2
+  // delay 1500 microsecond
+  /*uint32_t start = micros();
+  do {
+    yield();
+  } while ((micros() - start) < 1500);*/
   pinMode(SPI_MOSI,INPUT);      // change pin back to input
   
 }
@@ -762,7 +782,7 @@ int8_t SUSI2::process(void) {
             The commands 0x01 to 0x0F, 0x80 to 0x8F and 0xE0 to 0xFF are defined in [RCN-601] and 
             reserved for BiDi.*/
         if (IsValidCV(MyBuffer[BufferR].B.arg1)) {                      // is command valid for this slave?
-		  if (((MyBuffer[BufferR].B.arg1 & 0x7F) == 1) || ((MyBuffer[BufferR].B.arg1 & 0x7F) == 124)) {
+		      if (((MyBuffer[BufferR].B.arg1 & 0x7F) == 1) || ((MyBuffer[BufferR].B.arg1 & 0x7F) == 124)) {
             CV_Index= MyBuffer[BufferR].B.arg2;
             SendACK();                           // for index response is instant ...
           } else {
