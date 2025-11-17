@@ -272,7 +272,7 @@ The library **handles the ACK** that allows the decoder to know the outcome of t
 ------------
 
 ```c
-uint8_t uint8_t notifySusiCVRead(uint8_t CV, uint8_t CVindex);
+uint8_t notifySusiCVRead(uint8_t CV, uint8_t CVindex);
 ```
 *notifySusiCVRead()* It is invoked when: reading a CV is requested
 - Input:
@@ -284,7 +284,7 @@ uint8_t uint8_t notifySusiCVRead(uint8_t CV, uint8_t CVindex);
 ------------
 
 ```c
-uint8_t uint8_t notifySusiCVWrite(uint8_t CV, uint8_t CVindex, uint8_t Value);
+uint8_t notifySusiCVWrite(uint8_t CV, uint8_t CVindex, uint8_t Value);
 ```
 *notifySusiCVWrite()* it is invoked when: writing a CV is required.
 - Input:
@@ -296,7 +296,18 @@ uint8_t uint8_t notifySusiCVWrite(uint8_t CV, uint8_t CVindex, uint8_t Value);
 
 ------------
 
-RESET CVs, viene utilizzato la *stessa funzione* della Libreria [NmraDcc](https://github.com/mrrwa/NmraDcc):</br>
+```c
+uint8_t notifySusiStatusByte(void);
+```
+*notifySusiStatusByte()* it is invoked when: host decoder is asking for Status Byte or CV1020 is read. This CV is usually controled momentary by module status.
+- Input:
+  - None
+- Returns:
+  - Status byte - as requested in S-9.4.2/RCN-601 CV1020 (Bit 0 "WAIT", Bit 1 "SLOW", Bit 2 "HOLD", Bit 3 "STOP")
+
+------------
+
+RESET CVs, Called when CVs must be reset. This is called when CVs must be reset to their factory defaults. As parameter it receive value written to CV8</br>
 ```c
 void void notifyCVResetFactoryDefault(uint8_t Value);
 ```
