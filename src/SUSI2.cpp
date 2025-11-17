@@ -333,12 +333,8 @@ void SUSI2::initTimer1() {     // Timer 1 in "slave" mode.
 void SUSI2::SendACK() {
   pinMode(SPI_MOSI,OUTPUT_OD);  // change pin to output, with open drain
   digitalWrite(SPI_MOSI, LOW);  // set it to low
-  delay(2);                     // ch32 does not look for "half" milisecond, so delay(2) mean more than 1, less than 2
-  // delay 1500 microsecond
-  /*uint32_t start = micros();
-  do {
-    yield();
-  } while ((micros() - start) < 1500);*/
+  //delay(2);                     // ch32 does not look for "half" milisecond, so delay(2) mean more than 1, less than 2
+  delayMicroseconds(1500);       // seems, that delayMicrosecond will fit
   pinMode(SPI_MOSI,INPUT);      // change pin back to input
   
 }
@@ -711,10 +707,17 @@ int8_t SUSI2::process(void) {
             responds with an acknowledge.
             This and the following two commands are the 3-byte packets mentioned in section 4 according 
             to [S-9.2.1].*/
-        if (IsValidCV(MyBuffer[BufferR].B.arg1)) {                      // is command valid for this slave?
-		      if (((MyBuffer[BufferR].B.arg1 & 0x7F) == 1) || ((MyBuffer[BufferR].B.arg1 & 0x7F) == 124)) {
-            if (MyBuffer[BufferR].B.arg2 == CV_Index) { SendACK(); }                         // for index response is instant ...
-          } else {
+
+        // Special cases: CV898 (1) or CV1021 (124) = index; CV1020 (123) = Status byte
+        if (((MyBuffer[BufferR].B.arg1 & 0x7F) == 1) || ((MyBuffer[BufferR].B.arg1 & 0x7F) == 124)) {
+          if (MyBuffer[BufferR].B.arg2 == CV_Index) { SendACK(); }                         // for index response is instant ...
+        } else if ((MyBuffer[BufferR].B.arg1 & 0x7F) == 123) {      // Status Byte -> Bit 0 = Wait, Bit 1 = Slow ... 
+          if (notifySusiStatusByte) {
+            if (notifySusiStatusByte() == MyBuffer[BufferR].B.arg2) { SendACK(); }
+          }
+        } else {
+        // standard CV case
+          if (IsValidCV(MyBuffer[BufferR].B.arg1)) {                      // is command valid for this module?
             if (notifySusiCVRead) {                                                                     // If there is a CV storage system
               if (notifySusiCVRead(MyBuffer[BufferR].B.arg1 & 0x7F, CV_Index) == MyBuffer[BufferR].B.arg2) { SendACK(); }  // for others, function with CV and index must be called
             }
@@ -729,41 +732,43 @@ int8_t SUSI2::process(void) {
             with an acknowledge.
             K = 1: Bit Write. D is written to bit position B of the CV. The SUSI-Module confirms the writing 
             with an acknowledge*/
-        if ((IsValidCV(MyBuffer[BufferR].B.arg1)) && ((MyBuffer[BufferR].B.arg2 & 0xE0) == 0xE0)) {     // is command valid for this slave?
-          uint8_t BitMask = 1 << (MyBuffer[BufferR].B.arg2 & 0x07);         // prepare bit mask
-          uint8_t CVValue;
-          if (((MyBuffer[BufferR].B.arg1 & 0x7F) == 1) || ((MyBuffer[BufferR].B.arg1 & 0x7F) == 124)) {
-            CVValue = CV_Index;                         // for index response is instant ...
-          } else {
+
+        if ((MyBuffer[BufferR].B.arg2 & 0xE0) != 0xE0) {break;}     // invalid command
+        uint8_t BitMask = 1 << (MyBuffer[BufferR].B.arg2 & 0x07);         // prepare bit mask
+        uint8_t CVValue;
+
+        // Special cases: CV898 (1) or CV1021 (124) = index; CV1020 (123) = Status byte
+        if (((MyBuffer[BufferR].B.arg1 & 0x7F) == 1) || ((MyBuffer[BufferR].B.arg1 & 0x7F) == 124)) {
+          if (MyBuffer[BufferR].B.arg2 & 0x10) {                  // K=1 for write
+            if (MyBuffer[BufferR].B.arg2 & 0x08) {CV_Index |= BitMask;} else {CV_Index &= (!BitMask);}  // for index response is instant ...
+              SendACK();                          // confirm
+          } else {                                                  // K=0 for compare
+            if (((CV_Index & BitMask) == 0) == ((MyBuffer[BufferR].B.arg2 & 0x08) == 0)) {SendACK();}                          // if they are same, confirm
+          }
+        } else if ((MyBuffer[BufferR].B.arg1 & 0x7F) == 123) {      // Status Byte -> Bit 0 = Wait, Bit 1 = Slow ... 
+          if ((!(MyBuffer[BufferR].B.arg2 & 0x10)) && (notifySusiStatusByte)) { // this is read only = compare only
+            CVValue = notifySusiStatusByte();
+            CVValue &= BitMask;
+            if ((CVValue == 0) == ((MyBuffer[BufferR].B.arg2 & 0x08) == 0)) {SendACK();}                          // if they are same, confirm
+          }
+        } else {
+        // standard CV case
+        if (IsValidCV(MyBuffer[BufferR].B.arg1)) {     // is command valid for this module?
             if (notifySusiCVRead) {                                                                     // If there is a CV storage system
               CVValue = notifySusiCVRead(MyBuffer[BufferR].B.arg1 & 0x7F, CV_Index);  // for others, function with CV and index must be called
+              if (MyBuffer[BufferR].B.arg2 & 0x10) {                  // K=1 for write
+                if (MyBuffer[BufferR].B.arg2 & 0x08) {CVValue |= BitMask;} else {CVValue &= (!BitMask);}
+                if (notifySusiCVWrite) {
+                  if (notifySusiCVWrite(MyBuffer[BufferR].B.arg1 & 0x7F, CV_Index, CVValue) == CVValue) {   // for others, function with CV and index must be called
+                    SendACK();     // confirm
+                  }
+                }
+              } else {                                                // K=0 for compare
+                CVValue &= BitMask;
+                if ((CVValue == 0) == ((MyBuffer[BufferR].B.arg2 & 0x08) == 0)) {SendACK();}                          // if they are same, confirm
+              }
             }
           }
-          if (MyBuffer[BufferR].B.arg2 & 0x10) {                  // K=1 for write
-                if (((MyBuffer[BufferR].B.arg1 & 0x7F) == 1) || ((MyBuffer[BufferR].B.arg1 & 0x7F) == 124)) {
-                  if (MyBuffer[BufferR].B.arg2 & 0x08) {CV_Index |= BitMask;} else {CV_Index &= (!BitMask);}  // for index response is instant ...
-                    SendACK();                          // confirm
-                } else {
-                  if (notifySusiCVRead) {                                                                     // If there is a CV storage system
-                    CVValue = notifySusiCVRead(MyBuffer[BufferR].B.arg1 & 0x7F, CV_Index);
-                    if (MyBuffer[BufferR].B.arg2 & 0x08) {CVValue |= BitMask;} else {CVValue &= (!BitMask);}
-                    if (notifySusiCVWrite) {
-                      if (notifySusiCVWrite(MyBuffer[BufferR].B.arg1 & 0x7F, CV_Index, CVValue) == CVValue) {   // for others, function with CV and index must be called
-                        SendACK();     // confirm
-                      }
-                    }
-                  }
-                }
-          } else {                                                  // K=0 for compare
-                if (((MyBuffer[BufferR].B.arg1 & 0x7F) == 1) || ((MyBuffer[BufferR].B.arg1 & 0x7F) == 124)) {  // for index response is instant ...
-                  if (((CV_Index & BitMask) == 0) == ((MyBuffer[BufferR].B.arg2 & 0x08) == 0)) {SendACK();}                          // if they are same, confirm
-                } else {
-                  if (notifySusiCVRead) {                                                                     // If there is a CV storage system
-                    CVValue = notifySusiCVRead(MyBuffer[BufferR].B.arg1 & 0x7F, CV_Index) & BitMask;
-                    if ((CVValue == 0) == ((MyBuffer[BufferR].B.arg2 & 0x08) == 0)) {SendACK();}                          // if they are same, confirm
-                  }
-                }
-              }
         }
         break;
       case 0x7C:
@@ -781,12 +786,15 @@ int8_t SUSI2::process(void) {
             D = value to write into the CV. The SUSI-Module confirms the writing with an acknowledge.
             The commands 0x01 to 0x0F, 0x80 to 0x8F and 0xE0 to 0xFF are defined in [RCN-601] and 
             reserved for BiDi.*/
-        if (IsValidCV(MyBuffer[BufferR].B.arg1)) {                      // is command valid for this slave?
-		      if (((MyBuffer[BufferR].B.arg1 & 0x7F) == 1) || ((MyBuffer[BufferR].B.arg1 & 0x7F) == 124)) {
-            CV_Index= MyBuffer[BufferR].B.arg2;
-            SendACK();                           // for index response is instant ...
-          } else {
-            if (notifySusiCVWrite) {                                                                     // If there is a CV storage system
+
+        // Special cases: CV898 (1) or CV1021 (124) = index; (CV1020 (123) = Status byte is read only)
+        if (((MyBuffer[BufferR].B.arg1 & 0x7F) == 1) || ((MyBuffer[BufferR].B.arg1 & 0x7F) == 124)) {
+          CV_Index= MyBuffer[BufferR].B.arg2;
+          SendACK();                           // for index response is instant ...
+        } else {
+        // standard CV case
+          if (IsValidCV(MyBuffer[BufferR].B.arg1)) {                      // is command valid for this module?
+            if (notifySusiCVWrite)  {                                                                     // If there is a CV storage system
               if (notifySusiCVWrite(MyBuffer[BufferR].B.arg1 & 0x7F, CV_Index,MyBuffer[BufferR].B.arg2) == MyBuffer[BufferR].B.arg2) { SendACK(); }  // for others, function with CV and index must be called
             }
           }
@@ -800,8 +808,6 @@ int8_t SUSI2::process(void) {
         
         break;
     }
-    //Serial.print(" ");
-    //Serial.println(MyBuffer[BufferR].B.arg1, HEX);
     MyBuffer[BufferR].B.used = 0;
     if (++BufferR == BUFFER_SIZE) {BufferR = 0;}             // rotate cyrcular pointer
   }
@@ -816,7 +822,7 @@ SUSI Module #               |          897           | Fixed meaning
 ----------------------------+-------+-------+--------+----------
 SUSI CV-Banking	            |          898           | volatile, outdated variant
 ----------------------------+-------+-------+--------+----------
-Manufacturer-specific       |          899           | has been already used
+Manufacturer-specific       |          899           | has been already used (not recommended for new applications)
 ----------------------------+-------+-------+--------+----------
 Manufacturer identification | 900.0 | 940.0 | 980.0  | only in Bank 0; fixed
 ----------------------------+-------+-------+--------+----------
@@ -856,9 +862,13 @@ reserved                    |         1024           |
 
 bool SUSI2::IsValidCV(uint8_t CV_Value) {
   CV_Value ^= 0x80;                       // for standard usage upper bit must be 1, but is not practical to use.
+  /*  Special cases are solved before, it make no sense to solve them here.
   if (CV_Value & 0x80) {return false;}    // only values up to 127 are allowed for new implementations
   if (CV_Value < 4) {return true;}        // CV897 - CV899 are always correct, they are common for all slaves
-  if (CV_Value > 122) {return true;}      // CV1020 - CV1024 are always correct, they are common for all slaves
+  if ((CV_Value == 123) || (CV_Value == 124)) {return true;}      // this is tricky, CV1020 and CV1021 have special handling, rest are reserved
+  */
+
+  if (CV_Value == 0) {return true;}        // CV897 - module #
   if ((_slaveAddress == 1) && (CV_Value>2) && (CV_Value<43)) {return true;} // CV900 - CV939 are correct for slave 1
   if ((_slaveAddress == 2) && (CV_Value>42) && (CV_Value<83)) {return true;} // CV940 - CV979 are correct for slave 2
   if ((_slaveAddress == 3) && (CV_Value>82) && (CV_Value<123)) {return true;} // CV980 - CV1019 are correct for slave 3
