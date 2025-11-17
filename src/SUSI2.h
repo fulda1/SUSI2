@@ -391,6 +391,15 @@ extern "C" {                                                                    
         *       - the value read (post write) at the requested position
         */
         extern uint8_t notifySusiCVWrite(uint8_t CV, uint8_t CVindex, uint8_t Value) __attribute__((weak));
+        /* CV1020 is a status byte and is used, for example, for a WAIT function. This CV applies to all Modules and is not switched via CV 1021.
+        * 
+        *  notifySusiStatusByte() Called when host read CV1020 information. This CV is usually controled momentary by module status
+        *   Inputs:
+        *       - none
+        *   Returns:
+        *       - Status byte - as requested in S-9.4.2/RCN-601 CV1020 (Bit 0 "WAIT", Bit 1 "SLOW", Bit 2 "HOLD", Bit 3 "STOP")
+        */
+        extern uint8_t notifySusiStatusByte(void) __attribute__((weak));
         /* RESET CVs, the same method as the NmraDcc Library is used:
         * 
         *  notifyCVResetFactoryDefault() Called when CVs must be reset. This is called when CVs must be reset to their factory defaults.
