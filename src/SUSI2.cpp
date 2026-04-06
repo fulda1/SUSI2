@@ -709,9 +709,9 @@ int8_t SUSI2::process(void) {
             to [S-9.2.1].*/
 
         // Special cases: CV898 (1) or CV1021 (124) = index; CV1020 (123) = Status byte
-        if (((MyBuffer[BufferR].B.arg1 & 0x7F) == 1) || ((MyBuffer[BufferR].B.arg1 & 0x7F) == 124)) {
+        if ((MyBuffer[BufferR].B.arg1 == 0x81) || (MyBuffer[BufferR].B.arg1 == 0xFC)) {   // CV 1(898) or CV124(1021) are Index
           if (MyBuffer[BufferR].B.arg2 == CV_Index) { SendACK(); }                         // for index response is instant ...
-        } else if ((MyBuffer[BufferR].B.arg1 & 0x7F) == 123) {      // Status Byte -> Bit 0 = Wait, Bit 1 = Slow ... 
+        } else if (MyBuffer[BufferR].B.arg1 == 0xFB) {      // CV123(1020) = Status Byte -> Bit 0 = Wait, Bit 1 = Slow ... 
           if (notifySusiStatusByte) {
             if (notifySusiStatusByte() == MyBuffer[BufferR].B.arg2) { SendACK(); }
           }
@@ -733,39 +733,42 @@ int8_t SUSI2::process(void) {
             K = 1: Bit Write. D is written to bit position B of the CV. The SUSI-Module confirms the writing 
             with an acknowledge*/
 
-        if ((MyBuffer[BufferR].B.arg2 & 0xE0) != 0xE0) {break;}     // invalid command
-        uint8_t BitMask = 1 << (MyBuffer[BufferR].B.arg2 & 0x07);         // prepare bit mask
-        uint8_t CVValue;
-
-        // Special cases: CV898 (1) or CV1021 (124) = index; CV1020 (123) = Status byte
-        if (((MyBuffer[BufferR].B.arg1 & 0x7F) == 1) || ((MyBuffer[BufferR].B.arg1 & 0x7F) == 124)) {
-          if (MyBuffer[BufferR].B.arg2 & 0x10) {                  // K=1 for write
-            if (MyBuffer[BufferR].B.arg2 & 0x08) {CV_Index |= BitMask;} else {CV_Index &= (!BitMask);}  // for index response is instant ...
-              SendACK();                          // confirm
-          } else {                                                  // K=0 for compare
-            if (((CV_Index & BitMask) == 0) == ((MyBuffer[BufferR].B.arg2 & 0x08) == 0)) {SendACK();}                          // if they are same, confirm
-          }
-        } else if ((MyBuffer[BufferR].B.arg1 & 0x7F) == 123) {      // Status Byte -> Bit 0 = Wait, Bit 1 = Slow ... 
-          if ((!(MyBuffer[BufferR].B.arg2 & 0x10)) && (notifySusiStatusByte)) { // this is read only = compare only
-            CVValue = notifySusiStatusByte();
-            CVValue &= BitMask;
-            if ((CVValue == 0) == ((MyBuffer[BufferR].B.arg2 & 0x08) == 0)) {SendACK();}                          // if they are same, confirm
-          }
+        if ((MyBuffer[BufferR].B.arg2 & 0xE0) != 0xE0) {
+          //break;         // invalid command
         } else {
-        // standard CV case
-        if (IsValidCV(MyBuffer[BufferR].B.arg1)) {     // is command valid for this module?
-            if (notifySusiCVRead) {                                                                     // If there is a CV storage system
-              CVValue = notifySusiCVRead(MyBuffer[BufferR].B.arg1 & 0x7F, CV_Index);  // for others, function with CV and index must be called
-              if (MyBuffer[BufferR].B.arg2 & 0x10) {                  // K=1 for write
-                if (MyBuffer[BufferR].B.arg2 & 0x08) {CVValue |= BitMask;} else {CVValue &= (!BitMask);}
-                if (notifySusiCVWrite) {
-                  if (notifySusiCVWrite(MyBuffer[BufferR].B.arg1 & 0x7F, CV_Index, CVValue) == CVValue) {   // for others, function with CV and index must be called
-                    SendACK();     // confirm
+          uint8_t BitMask = 1 << (MyBuffer[BufferR].B.arg2 & 0x07);         // prepare bit mask
+          uint8_t CVValue;
+
+          // Special cases: CV898 (1) or CV1021 (124) = index; CV1020 (123) = Status byte
+          if ((MyBuffer[BufferR].B.arg1 == 0x81) || (MyBuffer[BufferR].B.arg1  == 0xFC)) {      // CV 1(898) or CV124(1021) are Index
+            if (MyBuffer[BufferR].B.arg2 & 0x10) {                  // K=1 for write
+              if (MyBuffer[BufferR].B.arg2 & 0x08) {CV_Index |= BitMask;} else {CV_Index &= (!BitMask);}  // for index response is instant ...
+                SendACK();                          // confirm
+            } else {                                                  // K=0 for compare
+              if (((CV_Index & BitMask) == 0) == ((MyBuffer[BufferR].B.arg2 & 0x08) == 0)) {SendACK();}                          // if they are same, confirm
+            }
+          } else if ((MyBuffer[BufferR].B.arg1 & 0x7F) == 123) {      // Status Byte -> Bit 0 = Wait, Bit 1 = Slow ... 
+            if ((!(MyBuffer[BufferR].B.arg2 & 0x10)) && (notifySusiStatusByte)) { // this is read only = compare only
+              CVValue = notifySusiStatusByte();
+              CVValue &= BitMask;
+              if ((CVValue == 0) == ((MyBuffer[BufferR].B.arg2 & 0x08) == 0)) {SendACK();}                          // if they are same, confirm
+            }
+          } else {
+          // standard CV case
+          if (IsValidCV(MyBuffer[BufferR].B.arg1)) {     // is command valid for this module?
+              if (notifySusiCVRead) {                                                                     // If there is a CV storage system
+                CVValue = notifySusiCVRead(MyBuffer[BufferR].B.arg1 & 0x7F, CV_Index);  // for others, function with CV and index must be called
+                if (MyBuffer[BufferR].B.arg2 & 0x10) {                  // K=1 for write
+                  if (MyBuffer[BufferR].B.arg2 & 0x08) {CVValue |= BitMask;} else {CVValue &= (!BitMask);}
+                  if (notifySusiCVWrite) {
+                    if (notifySusiCVWrite(MyBuffer[BufferR].B.arg1 & 0x7F, CV_Index, CVValue) == CVValue) {   // for others, function with CV and index must be called
+                      SendACK();     // confirm
+                    }
                   }
+                } else {                                                // K=0 for compare
+                  CVValue &= BitMask;
+                  if ((CVValue == 0) == ((MyBuffer[BufferR].B.arg2 & 0x08) == 0)) {SendACK();}                          // if they are same, confirm
                 }
-              } else {                                                // K=0 for compare
-                CVValue &= BitMask;
-                if ((CVValue == 0) == ((MyBuffer[BufferR].B.arg2 & 0x08) == 0)) {SendACK();}                          // if they are same, confirm
               }
             }
           }
@@ -788,7 +791,7 @@ int8_t SUSI2::process(void) {
             reserved for BiDi.*/
 
         // Special cases: CV898 (1) or CV1021 (124) = index; (CV1020 (123) = Status byte is read only)
-        if (((MyBuffer[BufferR].B.arg1 & 0x7F) == 1) || ((MyBuffer[BufferR].B.arg1 & 0x7F) == 124)) {
+        if ((MyBuffer[BufferR].B.arg1 == 0x81) || (MyBuffer[BufferR].B.arg1 == 0xFC)) {   // CV 1(898) or CV124(1021) are Index
           CV_Index= MyBuffer[BufferR].B.arg2;
           SendACK();                           // for index response is instant ...
         } else {
